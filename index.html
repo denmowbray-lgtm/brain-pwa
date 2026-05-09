@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Brain">
+  <meta name="theme-color" content="#000000">
+  <title>DENMOW Brain</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.4s ease;
+    }
+
+    #splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-border {
+      border: 2px solid #00FFFF;
+      box-shadow: 0 0 16px #00FFFF, inset 0 0 16px rgba(0,255,255,0.05);
+      padding: 40px 60px;
+      text-align: center;
+    }
+
+    .splash-title {
+      color: #00FFFF;
+      font-size: 2.4rem;
+      font-weight: bold;
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 12px #00FFFF;
+    }
+
+    .splash-sub {
+      color: #00FFFF99;
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      margin-top: 8px;
+    }
+
+    .splash-dot {
+      display: inline-block;
+      animation: pulse 1s infinite;
+      color: #00FFFF;
+      font-size: 1.5rem;
+      margin-top: 24px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    #frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #000;
+    }
+
+    #offline {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      color: #00FFFF;
+      font-family: 'Courier New', monospace;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 16px;
+    }
+
+    #offline.show { display: flex; }
+
+    .offline-box {
+      border: 2px solid #FF003C;
+      box-shadow: 0 0 16px #FF003C;
+      padding: 32px 48px;
+    }
+
+    .offline-title {
+      color: #FF003C;
+      font-size: 1.4rem;
+      letter-spacing: 0.2em;
+      text-shadow: 0 0 10px #FF003C;
+    }
+
+    .offline-msg {
+      color: #FF003C99;
+      font-size: 0.8rem;
+      margin-top: 10px;
+    }
+
+    .retry-btn {
+      margin-top: 20px;
+      padding: 10px 28px;
+      background: transparent;
+      border: 2px solid #00FFFF;
+      color: #00FFFF;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00FFFF55;
+      transition: box-shadow 0.2s;
+    }
+
+    .retry-btn:hover {
+      box-shadow: 0 0 20px #00FFFF;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Splash screen shown while iframe loads -->
+  <div id="splash">
+    <div class="splash-border">
+      <div class="splash-title">BRAIN</div>
+      <div class="splash-sub">DENMOW · KNOWLEDGE HUB</div>
+      <div class="splash-dot">●</div>
+    </div>
+  </div>
+
+  <!-- Offline fallback -->
+  <div id="offline">
+    <div class="offline-box">
+      <div class="offline-title">⚡ OFFLINE</div>
+      <div class="offline-msg">Cannot reach Brain server.<br>Check network or VPN.</div>
+      <button class="retry-btn" onclick="loadFrame()">RETRY</button>
+    </div>
+  </div>
+
+  <!-- Brain intake iframe -->
+  <iframe id="frame" title="DENMOW Brain"></iframe>
+
+  <script>
+    // ── Config ──────────────────────────────────────────
+    const BRAIN_URL = 'http://wcaasitteam.duckdns.org:5678/webhook/brain-intake';
+    // ────────────────────────────────────────────────────
+
+    const splash  = document.getElementById('splash');
+    const offline = document.getElementById('offline');
+    const frame   = document.getElementById('frame');
+
+    function showOffline() {
+      splash.classList.add('hidden');
+      offline.classList.add('show');
+    }
+
+    function loadFrame() {
+      offline.classList.remove('show');
+      splash.classList.remove('hidden');
+
+      frame.onload = () => {
+        setTimeout(() => splash.classList.add('hidden'), 300);
+      };
+
+      frame.onerror = showOffline;
+      frame.src = BRAIN_URL + '?t=' + Date.now(); // bust cache on retry
+    }
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.warn);
+    }
+
+    // Boot
+    loadFrame();
+
+    // Timeout fallback — if iframe hasn't loaded in 10s, show offline screen
+    setTimeout(() => {
+      if (splash.style.opacity !== '0' && !splash.classList.contains('hidden')) {
+        showOffline();
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
