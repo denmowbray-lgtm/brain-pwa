@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="Brain">
   <meta name="theme-color" content="#000000">
   <title>DENMOW Brain</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; width: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
@@ -75,6 +75,7 @@
       <div class="pin-error" id="pin-error"></div>
     </div>
   </div>
+
   <div id="splash" class="hidden">
     <div class="splash-border">
       <div class="splash-title">BRAIN</div>
@@ -82,6 +83,7 @@
       <div class="splash-dot">&#9679;</div>
     </div>
   </div>
+
   <div id="offline">
     <div class="offline-box">
       <div class="offline-title">&#9889; OFFLINE</div>
@@ -89,11 +91,14 @@
       <button class="retry-btn" onclick="loadFrame()">RETRY</button>
     </div>
   </div>
+
   <iframe id="frame" title="DENMOW Brain"></iframe>
+
   <script>
     const BRAIN_URL = 'https://wcaasitteam.duckdns.org/webhook/brain-intake';
     const CORRECT   = '1268';
     const STORE_KEY = 'brain_unlocked';
+
     const pinGate = document.getElementById('pin-gate');
     const splash  = document.getElementById('splash');
     const offline = document.getElementById('offline');
@@ -101,6 +106,7 @@
     const pinErr  = document.getElementById('pin-error');
     const pinBox  = document.getElementById('pin-box');
     let entered = '';
+
     function updateDots() {
       for (let i = 0; i < 4; i++) {
         document.getElementById('d' + i).classList.toggle('filled', i < entered.length);
@@ -125,7 +131,12 @@
       } else {
         pinErr.textContent = 'INVALID PIN';
         pinBox.classList.add('shake');
-        setTimeout(() => { pinBox.classList.remove('shake'); entered = ''; updateDots(); pinErr.textContent = ''; }, 500);
+        setTimeout(() => {
+          pinBox.classList.remove('shake');
+          entered = '';
+          updateDots();
+          pinErr.textContent = '';
+        }, 500);
       }
     }
     function showOffline() { splash.classList.add('hidden'); offline.classList.add('show'); }
@@ -141,8 +152,9 @@
       loadFrame();
       setTimeout(() => { if (!splash.classList.contains('hidden')) showOffline(); }, 10000);
     }
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(console.warn);
-    if (localStorage.getItem(STORE_KEY) === '1') { pinGate.classList.add('hidden'); boot(); } 
+
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
+    if (localStorage.getItem(STORE_KEY) === '1') { pinGate.classList.add('hidden'); boot(); }
   </script>
 </body>
 </html>
