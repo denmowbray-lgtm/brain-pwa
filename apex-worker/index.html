@@ -652,10 +652,9 @@ function onLive(){
   document.getElementById("console").classList.add("show");
   var g=document.getElementById("greet");
   g.innerHTML="";
-  // type out + speak greeting
+  // show greeting as text only — no voice until the user initiates (tap a pod or the mic)
   var txt=greetingText();
   g.innerHTML="<b>"+esc(txt)+"</b>";
-  setTimeout(function(){ speak(txt); }, 250);
   enableGyro();
 }
 
