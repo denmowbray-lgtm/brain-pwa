@@ -70,6 +70,28 @@
   @keyframes ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.1);opacity:0}}
   #gate .cta{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase;}
   #gate.hide{opacity:0;pointer-events:none;}
+  #gate.prehide{opacity:0;pointer-events:none;}
+  #access{
+    position:absolute;inset:0;z-index:32;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    background:var(--bg);transition:opacity .6s ease;
+  }
+  #access .mark{
+    font-family:'IBM Plex Mono',monospace;font-weight:600;
+    font-size:13px;letter-spacing:.42em;color:var(--core);
+    text-transform:uppercase;opacity:.9;
+  }
+  #access .cta{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase;}
+  #access .cta.bad{color:#f85149;display:none;}
+  #access .cta.bad.show{display:block;}
+  #acpin{
+    width:170px;text-align:center;letter-spacing:.5em;
+    font-family:'IBM Plex Mono',monospace;font-size:20px;
+    background:rgba(17,23,32,.8);border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);padding:12px 8px;outline:none;
+  }
+  #acpin:focus{border-color:var(--core);}
+  #access.hide{opacity:0;pointer-events:none;}
 
   /* ---- HUD ---- */
   #hud{position:absolute;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity 1s ease .2s;}
@@ -155,7 +177,13 @@
 <div class="grid"></div>
 <canvas id="scene"></canvas>
 
-<div id="gate">
+<div id="access">
+  <div class="mark">dmowbray.us</div>
+  <input id="acpin" inputmode="numeric" autocomplete="off" placeholder="••••" maxlength="10">
+  <div class="cta">enter pin to access</div>
+  <div class="cta bad" id="acbad">incorrect pin</div>
+</div>
+<div id="gate" class="prehide">
   <div class="mark">dmowbray.us</div>
   <div class="pulse"><div class="dot"></div></div>
   <div class="cta">tap to initialize</div>
@@ -537,9 +565,15 @@ function tapTest(x,y){
 }
 function activatePod(pod){
   blip(pod.live?660:300);
+  if(pod.needsK && !PIN){
+    flash(pod.label+" needs the PIN first.");
+    pinWrap.classList.add("show"); pinInput.focus();
+    return;
+  }
   speak(pod.say);
   if(pod.live && pod.go){
-    setTimeout(function(){ location.href=pod.go; }, 650);
+    var dest = pod.needsK ? pod.go + "?k=" + encodeURIComponent(PIN) : pod.go;
+    setTimeout(function(){ location.href=dest; }, 650);
   } else {
     flash(pod.label+" — route not live yet");
   }
@@ -742,7 +776,42 @@ function onLive(){
   enableGyro();
 }
 
+var accessEl=document.getElementById("access");
+var acPin=document.getElementById("acpin");
+var acBad=document.getElementById("acbad");
 var gate=document.getElementById("gate");
+function unlockSite(){
+  accessEl.classList.add("hide");
+  gate.classList.remove("prehide");
+}
+function tryAccess(){
+  var v=acPin.value.trim();
+  if(!v) return;
+  acBad.classList.remove("show");
+  fetch(DECK_DATA_URL+"?k="+encodeURIComponent(v)).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
+    if(j && j.ok){
+      PIN=v;
+      try{ sessionStorage.setItem("core_k", v); }catch(e){}
+      unlockSite();
+    } else { throw 0; }
+  }).catch(function(){
+    acBad.classList.add("show");
+    acPin.value=""; acPin.focus();
+  });
+}
+acPin.addEventListener("keydown",function(e){ if(e.key==="Enter") tryAccess(); });
+acPin.addEventListener("input",function(){ if(acPin.value.length>=4) tryAccess(); });
+(function(){
+  var saved="";
+  try{ saved=sessionStorage.getItem("core_k")||""; }catch(e){}
+  if(PIN || saved){
+    if(!PIN) PIN=saved;
+    unlockSite();
+  } else {
+    setTimeout(function(){ acPin.focus(); },300);
+  }
+})();
+
 function initGo(){
   audioInit();
   warmVoices();
