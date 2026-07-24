@@ -236,8 +236,8 @@ var PODS = [
   { id:"n8n",     label:"n8n",      go:"https://n8n.dmowbray.us",     live:true,  say:"Opening n8n." },
   { id:"jarvis",  label:"JARVIS",   go:"https://n8n.dmowbray.us/webhook/jarvis-ui", live:true, say:"Opening Jarvis." },
   { id:"deck",   label:"DECK",     go:"https://dmowbray.us/deck",     live:true,  say:"Opening the Command Deck." },
-  { id:"ha",      label:"HOME",     go:null, live:false, say:"Home Assistant isn't routed yet." },
-  { id:"cam",     label:"CAMERAS",  go:null, live:false, say:"Cameras aren't routed yet." }
+  { id:"ha",      label:"HOME",     go:"https://n8n.dmowbray.us/webhook/reactor", needsK:true, live:true, say:"Opening the Reactor." },
+  { id:"cam",     label:"CAMERAS",  go:"https://n8n.dmowbray.us/webhook/security", needsK:true, live:true, say:"Opening the Property Map." }
 ];
 /* live health per pod id: "ok" | "warn" | "down" | undefined (unknown) */
 var PODSTATE = {};
