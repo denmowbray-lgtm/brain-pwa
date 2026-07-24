@@ -311,7 +311,7 @@ function render(){
     });
   }
   var nadd=document.createElement("button"); nadd.className="addact"; nadd.textContent="+ ADD ITEM";
-  nadd.onclick=function(){ NEW.push({text:"",onAgenda:false}); drawNew(); };
+  nadd.onclick=function(){ NEW.push({text:"",onAgenda:true}); drawNew(); };
   nbody.appendChild(nadd); nc.appendChild(nbody); L.appendChild(nc); drawNew();
   refresh();
 }
