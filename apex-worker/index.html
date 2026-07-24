@@ -696,25 +696,58 @@ function askJarvis(q){
 var voicesReady=false;
 function warmVoices(){ try{ if(window.speechSynthesis){ speechSynthesis.getVoices(); voicesReady=true; } }catch(e){} }
 function cleanSpeech(text){ return String(text).replace(/[•·\u{1F300}-\u{1FAFF}]/gu,""); }
-function speak(text, onDone){
-  var t=cleanSpeech(text);
-  stopSpeak();
-  if(!PIN){ speakLocal(t, onDone); return; }
-  fetch(TTS_URL,{
+var speakGen=0, speakQueue=[], speakIdx=0, speakPrefetch={};
+function chunkSpeech(t){
+  var parts=t.match(/[^.!?]+[.!?]+["')\]]?\s*|[^.!?]+$/g)||[t];
+  var chunks=[], cur="";
+  for(var i=0;i<parts.length;i++){
+    cur+=parts[i];
+    if(cur.length>=70 || i===parts.length-1){ chunks.push(cur.trim()); cur=""; }
+  }
+  var out=[];
+  for(var j=0;j<chunks.length;j++){ if(chunks[j].length>0) out.push(chunks[j]); }
+  return out;
+}
+function fetchTtsChunk(gen,i){
+  if(speakPrefetch[i]) return speakPrefetch[i];
+  speakPrefetch[i]=fetch(TTS_URL,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ k:PIN, text:t })
+    body:JSON.stringify({ k:PIN, text:speakQueue[i] })
   }).then(function(r){
     var ct=r.headers.get("content-type")||"";
     if(r.ok && ct.indexOf("audio")===0) return r.blob();
     throw new Error("fallback");
-  }).then(function(b){
+  });
+  return speakPrefetch[i];
+}
+function playTtsChunk(gen,onDone){
+  if(gen!==speakGen) return;
+  if(speakIdx>=speakQueue.length){ endSpeak(onDone); return; }
+  var i=speakIdx;
+  fetchTtsChunk(gen,i).then(function(b){
+    if(gen!==speakGen) return;
+    if(i+1<speakQueue.length) fetchTtsChunk(gen,i+1);
     ttsAudio=new Audio(URL.createObjectURL(b));
-    beginSpeak();
-    ttsAudio.onended=function(){ endSpeak(onDone); };
-    ttsAudio.onerror=function(){ endSpeak(onDone); };
-    ttsAudio.play().catch(function(){ endSpeak(onDone); });
-  }).catch(function(){ speakLocal(t, onDone); });
+    ttsAudio.onended=function(){ if(gen!==speakGen) return; speakIdx++; playTtsChunk(gen,onDone); };
+    ttsAudio.onerror=function(){ if(gen!==speakGen) return; speakIdx++; playTtsChunk(gen,onDone); };
+    ttsAudio.play().catch(function(){ if(gen===speakGen) endSpeak(onDone); });
+  }).catch(function(){
+    if(gen!==speakGen) return;
+    var rest=speakQueue.slice(speakIdx).join(" ");
+    speakLocal(rest, onDone);
+  });
+}
+function speak(text, onDone){
+  var t=cleanSpeech(text);
+  stopSpeak();
+  if(!PIN){ speakLocal(t, onDone); return; }
+  speakGen++;
+  var gen=speakGen;
+  speakQueue=chunkSpeech(t); speakIdx=0; speakPrefetch={};
+  if(speakQueue.length===0){ if(onDone) onDone(); return; }
+  beginSpeak();
+  playTtsChunk(gen,onDone);
 }
 function speakLocal(t, onDone){
   try{
@@ -740,6 +773,7 @@ function endSpeak(onDone){
   if(onDone) onDone();
 }
 function stopSpeak(){
+  speakGen++; speakQueue=[]; speakIdx=0; speakPrefetch={};
   try{ if(ttsAudio){ ttsAudio.onended=null; ttsAudio.onerror=null; ttsAudio.pause(); ttsAudio=null; } }catch(e){}
   try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){}
   speakingNow=false; micEl.classList.remove("speaking");
