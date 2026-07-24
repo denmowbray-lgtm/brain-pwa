@@ -6,6 +6,8 @@
 <title>dmowbray.us</title>
 <meta name="description" content="Personal infrastructure core — self-hosted home automation and operational tooling on owned hardware.">
 <meta name="theme-color" content="#0a0e14">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
 
@@ -118,6 +120,16 @@
   .mic.listening{border-color:var(--core);box-shadow:0 0 0 1px var(--core),0 0 26px rgba(79,195,247,.5);}
   .mic.listening svg{stroke:var(--core);}
   .mic.busy{border-color:var(--pending);}
+  .mic.speaking{border-color:var(--online);box-shadow:0 0 0 1px var(--online),0 0 22px rgba(63,185,80,.45);}
+  .mic.speaking svg{stroke:var(--online);}
+  .convo{
+    pointer-events:auto;cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;
+    color:var(--muted);text-transform:uppercase;opacity:.55;
+    border:1px solid var(--line);border-radius:20px;padding:4px 12px;
+    transition:color .2s,border-color .2s,opacity .2s;
+  }
+  .convo.on{color:var(--core);border-color:var(--core);opacity:.9;}
   .hint{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;opacity:.7;}
 
   /* ---- PIN entry ---- */
@@ -171,6 +183,7 @@
     </svg>
   </div>
   <div class="hint" id="michint">tap to speak</div>
+  <div class="convo" id="convo">conversation off</div>
 </div>
 
 <script>
@@ -185,6 +198,9 @@
 var JARVIS_URL = "https://n8n.dmowbray.us/webhook/jarvis";
 var PIN = new URLSearchParams(location.search).get("k") || "";   // never hardcoded; supply via ?k=
 var SESSION = "apex-" + Math.random().toString(36).slice(2, 9);
+var TTS_URL = "https://n8n.dmowbray.us/webhook/tts";
+var DECK_DATA_URL = "https://n8n.dmowbray.us/webhook/deck-data";
+var SIT_DATA_URL = "https://n8n.dmowbray.us/webhook/sit-team-data";
 
 var PODS = [
   { id:"sitteam", label:"SIT TEAM", go:"https://sitteam.dmowbray.us", live:true,  say:"Opening Sit Team." },
@@ -195,6 +211,8 @@ var PODS = [
   { id:"ha",      label:"HOME",     go:null, live:false, say:"Home Assistant isn't routed yet." },
   { id:"cam",     label:"CAMERAS",  go:null, live:false, say:"Cameras aren't routed yet." }
 ];
+/* live health per pod id: "ok" | "warn" | "down" | undefined (unknown) */
+var PODSTATE = {};
 
 /* ---------- canvas ---------- */
 var cv = document.getElementById("scene");
@@ -356,7 +374,8 @@ function drawPods(now, reveal){
     var x=pr.px, y=pr.py;
     var depth=pr.depth;
     var a = reveal * (0.4 + 0.6*((depth+1)/2));
-    var col = PODS[i].live ? "63,185,80" : "240,165,0";
+    var st = PODSTATE[PODS[i].id];
+    var col = st==="ok" ? "63,185,80" : st==="warn" ? "240,165,0" : st==="down" ? "248,81,73" : (PODS[i].live ? "63,185,80" : "240,165,0");
     // filament to core
     ctx.strokeStyle="rgba("+(PODS[i].live?"79,195,247":"240,165,0")+","+(0.10*a)+")";
     ctx.lineWidth=1;
@@ -553,7 +572,7 @@ function greetingText(){
 
 /* ---------- voice loop -> JARVIS ---------- */
 var SR = window.SpeechRecognition||window.webkitSpeechRecognition;
-var rec=null, listening=false, busy=false;
+var rec=null, listening=false, busy=false, speakingNow=false, convoMode=false, ttsAudio=null;
 var micEl=document.getElementById("mic");
 var hintEl=document.getElementById("michint");
 var transEl=document.getElementById("transcript");
@@ -565,6 +584,7 @@ function flash(msg){ setTrans('<span class="jarvis">'+esc(msg)+'</span>'); }
 function esc(s){return String(s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
 
 micEl.addEventListener("click", function(){
+  if(speakingNow){ stopSpeak(); startListen(); return; } // barge-in: interrupt JARVIS and talk
   if(busy) return;
   if(!PIN){ // need a pin first
     pinWrap.classList.add("show");
@@ -574,13 +594,20 @@ micEl.addEventListener("click", function(){
   if(listening){ stopListen(); return; }
   startListen();
 });
+var convoEl=document.getElementById("convo");
+convoEl.addEventListener("click", function(){
+  convoMode=!convoMode;
+  convoEl.classList.toggle("on", convoMode);
+  convoEl.textContent = convoMode ? "conversation on" : "conversation off";
+  blip(convoMode?760:420);
+});
 pinInput.addEventListener("keydown",function(e){ if(e.key==="Enter") commitPin(); });
 pinInput.addEventListener("input",function(){ if(pinInput.value.length>=4 && pinInput.value.length<=10){} });
 function commitPin(){
   var v=pinInput.value.trim();
   if(!v) return;
   PIN=v; pinWrap.classList.remove("show");
-  blip(720); startListen();
+  blip(720); healthTick(); startListen();
 }
 
 function startListen(){
@@ -622,7 +649,7 @@ function askJarvis(q){
       setTrans('<span class="jarvis">'+esc(reply)+'</span>');
     } else {
       setTrans('<span class="you">'+esc(q)+'</span><br><span class="jarvis">'+esc(reply)+'</span>');
-      speak(reply);
+      speak(reply, maybeRelisten);
     }
   }).catch(function(){
     setTrans('<span class="jarvis">Connection to JARVIS failed.</span>');
@@ -631,23 +658,80 @@ function askJarvis(q){
   });
 }
 
-/* ---------- speech synthesis ---------- */
+/* ---------- speech: OpenAI TTS via n8n, browser voice fallback ---------- */
 var voicesReady=false;
 function warmVoices(){ try{ if(window.speechSynthesis){ speechSynthesis.getVoices(); voicesReady=true; } }catch(e){} }
-function speak(text){
+function cleanSpeech(text){ return String(text).replace(/[•·\u{1F300}-\u{1FAFF}]/gu,""); }
+function speak(text, onDone){
+  var t=cleanSpeech(text);
+  stopSpeak();
+  if(!PIN){ speakLocal(t, onDone); return; }
+  fetch(TTS_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ k:PIN, text:t })
+  }).then(function(r){
+    var ct=r.headers.get("content-type")||"";
+    if(r.ok && ct.indexOf("audio")===0) return r.blob();
+    throw new Error("fallback");
+  }).then(function(b){
+    ttsAudio=new Audio(URL.createObjectURL(b));
+    beginSpeak();
+    ttsAudio.onended=function(){ endSpeak(onDone); };
+    ttsAudio.onerror=function(){ endSpeak(onDone); };
+    ttsAudio.play().catch(function(){ endSpeak(onDone); });
+  }).catch(function(){ speakLocal(t, onDone); });
+}
+function speakLocal(t, onDone){
   try{
-    if(!window.speechSynthesis) return;
-    var u=new SpeechSynthesisUtterance(text.replace(/[•·\u{1F300}-\u{1FAFF}]/gu,""));
+    if(!window.speechSynthesis){ if(onDone) onDone(); return; }
+    var u=new SpeechSynthesisUtterance(t);
     u.rate=1.02; u.pitch=0.92;
     var vs=speechSynthesis.getVoices();
     var pick=vs.find(function(v){return /Google US English|Daniel|Microsoft (Guy|David)/i.test(v.name);});
     if(pick) u.voice=pick;
+    beginSpeak();
+    u.onend=function(){ endSpeak(onDone); };
+    u.onerror=function(){ endSpeak(onDone); };
     speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }catch(e){}
+  }catch(e){ endSpeak(onDone); }
 }
+function beginSpeak(){
+  speakingNow=true; micEl.classList.add("speaking");
+  hintEl.textContent="speaking\u2026 tap to interrupt";
+}
+function endSpeak(onDone){
+  speakingNow=false; micEl.classList.remove("speaking");
+  hintEl.textContent="tap to speak";
+  if(onDone) onDone();
+}
+function stopSpeak(){
+  try{ if(ttsAudio){ ttsAudio.onended=null; ttsAudio.onerror=null; ttsAudio.pause(); ttsAudio=null; } }catch(e){}
+  try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){}
+  speakingNow=false; micEl.classList.remove("speaking");
+}
+function maybeRelisten(){
+  if(convoMode && !listening && !busy){ setTimeout(function(){ if(convoMode && !listening && !busy && !speakingNow) startListen(); }, 300); }
+}
+
+/* ---------- pod health lamps ---------- */
+function healthTick(){
+  if(!PIN) return;
+  fetch(DECK_DATA_URL+"?k="+encodeURIComponent(PIN)).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
+    if(j && j.ok){
+      PODSTATE.n8n="ok"; PODSTATE.deck="ok";
+      PODSTATE.jarvis=(typeof j.containers==="number" && j.containers<4) ? "warn" : "ok";
+    } else { PODSTATE.n8n="warn"; PODSTATE.deck="warn"; }
+  }).catch(function(){ PODSTATE.n8n="warn"; PODSTATE.deck="warn"; PODSTATE.jarvis="warn"; });
+  fetch(SIT_DATA_URL+"?pin="+encodeURIComponent(PIN)).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(){
+    PODSTATE.sitteam="ok";
+  }).catch(function(){ PODSTATE.sitteam="warn"; });
+}
+setInterval(healthTick, 120000);
 
 /* ---------- lifecycle ---------- */
 function onLive(){
+  if(PIN) healthTick();
   document.getElementById("hud").classList.add("show");
   document.getElementById("console").classList.add("show");
   var g=document.getElementById("greet");
