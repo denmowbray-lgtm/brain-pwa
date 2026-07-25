@@ -150,11 +150,18 @@
     background:var(--raised);color:var(--muted);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.4px;cursor:pointer}
   .picker button.sel{background:rgba(193,154,91,.16);border-color:var(--cyan);color:var(--cyan)}
   .loading{text-align:center;color:var(--muted);font-size:13px;padding:40px}
+  .reclist{margin:2px 0 14px}
+  .recline{font-size:13px;color:var(--text);padding:5px 0 5px 10px;border-left:2px solid var(--border);margin:3px 0;line-height:1.4}
+  .recline.task{color:var(--cyan);border-left-color:var(--cyan)}
+  .navback{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}
+  .navback button{flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--raised);color:var(--muted);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer}
+  .navback button:active{background:rgba(193,154,91,.16);color:var(--cyan)}
 </style>
 </head>
 <body>
 <div class="phone">
   <div class="staging" id="banner">MEETING MODE · LIVE · writes to the Brain</div>
+  <div class="navback"><button onclick="window.open('https://n8n.dmowbray.us/webhook/capture?k=1268&tab=ag','_blank')">← Agenda</button><button onclick="window.open('https://n8n.dmowbray.us/webhook/capture?k=1268&tab=tk','_blank')">← Tasks</button></div>
   <header>
     <div class="eyebrow">WCAA · WEEKLY MEETING</div>
     <div class="h-title" id="hdept">Select a department</div>
@@ -206,7 +213,7 @@ function loadDept(){
   ITEMS=[]; S={}; NEW=[];
   fetch("https://n8n.dmowbray.us/webhook/meeting-agenda?k="+encodeURIComponent(K)+"&p=WCAA").then(function(r){return r.json();}).then(function(d){
     if(!d.success){ document.getElementById("list").innerHTML='<div class="loading">Could not load ('+(d.error||"error")+').</div>'; return; }
-    ITEMS = d.items.filter(function(it){ return it.dept===curDept && !it.parent; });
+    window._ALL = d.items; ITEMS = d.items.filter(function(it){ return it.dept===curDept && !it.parent; });
     ITEMS.forEach(function(i){ S[i.id]={status:null,note:"",actions:[]}; });
     document.getElementById("hsub").textContent=ITEMS.length+" items";
     render();
@@ -250,8 +257,13 @@ function render(){
     head.appendChild(tag); head.appendChild(mid); head.appendChild(dot);
     c.appendChild(head);
     var body=document.createElement("div"); body.className="card-body";
-    var rawnote=(i.notes||"").replace(/^raw:\s*/,"");
-    if(rawnote){ var cx=document.createElement("div"); cx.className="ctx"; cx.textContent="Context: "+rawnote; body.appendChild(cx); }
+    var _lines=String(i.notes||"").split("\n").map(function(x){return x.trim();}).filter(Boolean);
+    var _ctx="", _notes=[];
+    _lines.forEach(function(l){ if(l.indexOf("raw:")===0){ _ctx=l.substring(4).trim(); } else if(l.indexOf("MEETING")===0){ _notes.push(l.replace(/^MEETING\s*/,"").trim()); } else { _notes.push(l); } });
+    if(_ctx){ var cx=document.createElement("div"); cx.className="ctx"; cx.textContent="Context: "+_ctx; body.appendChild(cx); }
+    if(_notes.length){ var nl=document.createElement("div"); nl.className="lbl"; nl.textContent="Notes on record"; body.appendChild(nl); var nb=document.createElement("div"); nb.className="reclist"; _notes.forEach(function(t){ var r=document.createElement("div"); r.className="recline"; r.textContent=t; nb.appendChild(r); }); body.appendChild(nb); }
+    var _kids=(window._ALL||[]).filter(function(t){return t.pid===i.id;});
+    if(_kids.length){ var kl=document.createElement("div"); kl.className="lbl"; kl.textContent="Sub-tasks ("+_kids.length+")"; body.appendChild(kl); var kb=document.createElement("div"); kb.className="reclist"; _kids.forEach(function(t){ var r=document.createElement("div"); r.className="recline task"; r.textContent="\u2022 "+t.title; kb.appendChild(r); }); body.appendChild(kb); }
     var sl=document.createElement("div"); sl.className="lbl"; sl.textContent="Status"; body.appendChild(sl);
     var seg=document.createElement("div"); seg.className="seg";
     [["done","DONE"],["closed","CLOSED"],["carry","CARRY"]].forEach(function(pair){
