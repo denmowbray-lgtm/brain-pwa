@@ -377,7 +377,7 @@ function fileIt(){
   sheet.innerHTML='<div class="sheet-head"><div class="t">Filing...</div></div><div class="sheet-body"><div class="spinner"></div></div>';
   var r=window._review||{};
   fetch("https://n8n.dmowbray.us/webhook/meeting-file",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({k:K,dept:r.dept,review:r.out,items:r.items,newItems:r.newItems})})
+    body:JSON.stringify({k:K,dept:r.dept,review:r.out,items:r.items,newItems:r.newItems,today:new Date().toISOString().split("T")[0]})})
     .then(function(x){return x.json();})
     .then(function(res){
       sheet.innerHTML='<div class="done-screen"><div class="ck">&#10003;</div><div style="font-size:18px;font-weight:700">Filed to the Brain</div><div class="s" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px">'+(res.summary||"Notes appended · actions and new items created · closed items off the agenda.")+'</div><div style="margin-top:24px"><button class="file-btn" style="max-width:220px" onclick="location.reload()">Done</button></div></div>';
