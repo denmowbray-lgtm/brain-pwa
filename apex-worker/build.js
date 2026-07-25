@@ -102,8 +102,8 @@ const worker =
 '  if (p === "/dk-icon-512.png") return new Response(bin(DPNG512), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
 '  if (p === "/m-deck.json") return new Response(MDECK, { headers: { "content-type": "application/manifest+json", "cache-control": "no-store" } });\n' +
 '  if (p === "/sw-deck.js") return new Response(SW, { headers: { "content-type": "application/javascript", "cache-control": "no-store" } });\n' +
-'  if (p === "/deck-icon-192.png") return new Response(bin(DECK192), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
-'  if (p === "/deck-icon-512.png") return new Response(bin(DECK512), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
+'  if (p === "/dk-icon-192.png" || p === "/deck-icon-192.png") return new Response(bin(DECK192), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
+'  if (p === "/dk-icon-512.png" || p === "/deck-icon-512.png") return new Response(bin(DECK512), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
 '  if (p === "/sw.js") return new Response(SW, { headers: { "content-type": "application/javascript", "cache-control": "no-store" } });\n' +
 '  if (p === "/sw-deck.js") return new Response(SW, { headers: { "content-type": "application/javascript", "cache-control": "no-store", "Service-Worker-Allowed": "/deck" } });\n' +
 '  var b64 = "__HTMLB64__";\n' +
