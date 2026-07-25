@@ -826,6 +826,11 @@ gate.addEventListener("click",initGo);
 if(window.speechSynthesis)speechSynthesis.onvoiceschanged=warmVoices;
 
 tickClock();setInterval(tickClock,1000);
+
+/* PWA: register no-op service worker (required for Chrome Android install) */
+if("serviceWorker" in navigator){
+  try{navigator.serviceWorker.register("/sw.js").catch(function(){});}catch(e){}
+}
 </script>
 </body>
 </html>
