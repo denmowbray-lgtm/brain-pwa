@@ -3,7 +3,7 @@
 // The apex worker (Cloudflare script "soft-limit-2cfc") serves index.html as a
 // base64 blob. Edit index.html, run this, then deploy worker.js to Cloudflare.
 // Serves CORE PWA assets (/manifest.json /icon.svg /icon-192.png /icon-512.png /sw.js)
-// and DECK PWA assets (/m-deck.json /sw-deck.js /deck-icon-192.png /deck-icon-512.png)
+// and DECK PWA assets (/m-deck.json /sw-deck.js /dk-icon-192.png /dk-icon-512.png)
 // so both surfaces pass Chrome Android installability (PNG icons + service worker).
 const fs = require("fs");
 const html = fs.readFileSync(__dirname + "/index.html", "utf8");
@@ -36,9 +36,9 @@ const deckManifest = JSON.stringify({
   background_color: "#0b0e0d",
   theme_color: "#0b0e0d",
   icons: [
-    { src: "/deck-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-    { src: "/deck-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-    { src: "/deck-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
+    { src: "/dk-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+    { src: "/dk-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    { src: "/dk-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
   ]
 });
 
@@ -76,8 +76,8 @@ const worker =
 '  if (p === "/icon.svg") return new Response(ICON, { headers: { "content-type": "image/svg+xml", "cache-control": "max-age=86400" } });\n' +
 '  if (p === "/icon-192.png") return new Response(bin(PNG192), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
 '  if (p === "/icon-512.png") return new Response(bin(PNG512), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
-'  if (p === "/deck-icon-192.png") return new Response(bin(DPNG192), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
-'  if (p === "/deck-icon-512.png") return new Response(bin(DPNG512), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
+'  if (p === "/dk-icon-192.png") return new Response(bin(DPNG192), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
+'  if (p === "/dk-icon-512.png") return new Response(bin(DPNG512), { headers: { "content-type": "image/png", "cache-control": "max-age=86400" } });\n' +
 '  if (p === "/sw.js") return new Response(SW, { headers: { "content-type": "application/javascript", "cache-control": "no-store" } });\n' +
 '  if (p === "/sw-deck.js") return new Response(SW, { headers: { "content-type": "application/javascript", "cache-control": "no-store", "Service-Worker-Allowed": "/deck" } });\n' +
 '  var b64 = "__HTMLB64__";\n' +
