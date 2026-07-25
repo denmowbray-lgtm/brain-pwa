@@ -12,12 +12,12 @@ const manifest = JSON.stringify({
   short_name: "CORE",
   start_url: "/",
   display: "standalone",
-  background_color: "#0a0e14",
-  theme_color: "#0a0e14",
+  background_color: "#07090e",
+  theme_color: "#07090e",
   icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }]
 });
 
-const icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#0a0e14"/><circle cx="256" cy="256" r="150" fill="none" stroke="#1e2d3d" stroke-width="10"/><circle cx="256" cy="256" r="64" fill="#4fc3f7"/><circle cx="256" cy="106" r="18" fill="#3fb950"/></svg>';
+const icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#07090e"/><path d="M40 330 C140 250 200 390 300 310 S460 240 500 290" fill="none" stroke="#2dd4bf" stroke-width="22" stroke-linecap="round" opacity="0.9"/><path d="M20 240 C120 170 210 300 320 220 S450 160 500 200" fill="none" stroke="#60a5fa" stroke-width="18" stroke-linecap="round" opacity="0.75"/><path d="M50 410 C160 350 240 460 350 390 S470 340 500 370" fill="none" stroke="#a78bfa" stroke-width="16" stroke-linecap="round" opacity="0.7"/><path d="M300 70 L258 160 L296 160 L252 250 L342 140 L302 140 L344 70 Z" fill="#eef2ff" opacity="0.95"/></svg>';
 
 const worker =
 'addEventListener("fetch", function (e) { e.respondWith(serve(e.request)); });\n' +
