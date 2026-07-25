@@ -163,7 +163,7 @@
 <body>
 <div class="phone">
   <div class="staging" id="banner">MEETING MODE · LIVE · writes to the Brain</div>
-  <div class="navback"><button onclick="window.open('https://n8n.dmowbray.us/webhook/capture?k=1268&tab=ag','_blank')">← Agenda</button><button onclick="window.open('https://n8n.dmowbray.us/webhook/capture?k=1268&tab=tk','_blank')">← Tasks</button></div>
+  <div class="navback"><button onclick="location.href='capture?k=1268&tab=ag'">← Agenda</button><button onclick="location.href='capture?k=1268&tab=tk'">← Tasks</button></div>
   <header>
     <div class="eyebrow">WCAA · WEEKLY MEETING</div>
     <div class="h-title" id="hdept">Select a department</div>
@@ -213,7 +213,7 @@ function loadDept(){
   document.getElementById("hdept").textContent=curDept;
   document.getElementById("list").innerHTML='<div class="loading">Loading '+curDept+' agenda...</div>';
   ITEMS=[]; S={}; NEW=[]; TDONE={};
-  fetch("https://n8n.dmowbray.us/webhook/meeting-agenda?k="+encodeURIComponent(K)+"&p=WCAA").then(function(r){return r.json();}).then(function(d){
+  fetch("./meeting-agenda?k="+encodeURIComponent(K)+"&p=WCAA").then(function(r){return r.json();}).then(function(d){
     if(!d.success){ document.getElementById("list").innerHTML='<div class="loading">Could not load ('+(d.error||"error")+').</div>'; return; }
     window._ALL = d.items; ITEMS = d.items.filter(function(it){ return it.dept===curDept && !it.parent; });
     ITEMS.forEach(function(i){ S[i.id]={status:null,note:"",actions:[]}; });
@@ -344,7 +344,7 @@ function openReview(){
   });
   var newItems = NEW.filter(function(x){return x.text.trim();}).map(function(x){return {text:x.text.trim(), onAgenda:x.onAgenda};});
   var doneTasks = Object.keys(TDONE).filter(function(k){return TDONE[k];});
-  fetch("https://n8n.dmowbray.us/webhook/meeting-review",{method:"POST",headers:{"Content-Type":"application/json"},
+  fetch("./meeting-review",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({k:K,dept:curDept,items:payload,newItems:newItems,doneTasks:doneTasks})})
     .then(function(r){return r.json();})
     .then(function(out){ window._review={dept:curDept,items:payload,newItems:newItems,out:out,doneTasks:doneTasks}; renderReview(out); })
@@ -395,7 +395,7 @@ function fileIt(){
   var sheet=document.getElementById("sheet");
   sheet.innerHTML='<div class="sheet-head"><div class="t">Filing...</div></div><div class="sheet-body"><div class="spinner"></div></div>';
   var r=window._review||{};
-  fetch("https://n8n.dmowbray.us/webhook/meeting-file",{method:"POST",headers:{"Content-Type":"application/json"},
+  fetch("./meeting-file",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({k:K,dept:r.dept,review:r.out,items:r.items,newItems:r.newItems,doneTasks:r.doneTasks||[],today:new Date().toISOString().split("T")[0]})})
     .then(function(x){return x.json();})
     .then(function(res){
