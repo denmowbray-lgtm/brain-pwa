@@ -152,7 +152,9 @@
   .loading{text-align:center;color:var(--muted);font-size:13px;padding:40px}
   .reclist{margin:2px 0 14px}
   .recline{font-size:13px;color:var(--text);padding:5px 0 5px 10px;border-left:2px solid var(--border);margin:3px 0;line-height:1.4}
-  .recline.task{color:var(--cyan);border-left-color:var(--cyan)}
+  .recline.task{color:var(--cyan);border-left-color:var(--cyan);cursor:pointer;user-select:none}
+  .recline.task:active{background:rgba(193,154,91,.10)}
+  .recline.task.tdone{color:var(--green);border-left-color:var(--green);text-decoration:line-through;opacity:.7}
   .navback{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}
   .navback button{flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--raised);color:var(--muted);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer}
   .navback button:active{background:rgba(193,154,91,.16);color:var(--cyan)}
@@ -181,7 +183,7 @@
 var K = (new URLSearchParams(location.search)).get("k") || "";
 var DEPTS = ["Environmental","Power Systems","Fleet Services","Asset Management"];
 var curDept = (new URLSearchParams(location.search)).get("dept") || "";
-var ITEMS = [], S = {}, NEW = [];
+var ITEMS = [], S = {}, NEW = [], TDONE = {};
 
 var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 var recog = null;
@@ -210,7 +212,7 @@ function loadDept(){
   drawPicker();
   document.getElementById("hdept").textContent=curDept;
   document.getElementById("list").innerHTML='<div class="loading">Loading '+curDept+' agenda...</div>';
-  ITEMS=[]; S={}; NEW=[];
+  ITEMS=[]; S={}; NEW=[]; TDONE={};
   fetch("https://n8n.dmowbray.us/webhook/meeting-agenda?k="+encodeURIComponent(K)+"&p=WCAA").then(function(r){return r.json();}).then(function(d){
     if(!d.success){ document.getElementById("list").innerHTML='<div class="loading">Could not load ('+(d.error||"error")+').</div>'; return; }
     window._ALL = d.items; ITEMS = d.items.filter(function(it){ return it.dept===curDept && !it.parent; });
@@ -224,9 +226,10 @@ function touched(id){ var s=S[id]; return s.status||s.note.trim()||s.actions.som
 function refresh(){
   var n=ITEMS.filter(function(i){return touched(i.id);}).length;
   var nu=NEW.filter(function(x){return x.text.trim();}).length;
+  var ntd=Object.keys(TDONE).filter(function(k){return TDONE[k];}).length;
   document.getElementById("pbar").style.width=(ITEMS.length?(n/ITEMS.length*100):0)+"%";
   document.getElementById("ptext").textContent=n+" of "+ITEMS.length+" touched"+(nu?" · +"+nu+" new":"");
-  var total=n+nu;
+  var total=n+nu+ntd;
   document.getElementById("fileBtn").disabled = total===0;
   document.getElementById("fileBtn").textContent = total===0 ? "Review & File" : "Review & File ("+total+")";
   var col={done:"#5ac878",closed:"#ef4444",carry:"#f2b134"};
@@ -263,7 +266,10 @@ function render(){
     if(_ctx){ var cx=document.createElement("div"); cx.className="ctx"; cx.textContent="Context: "+_ctx; body.appendChild(cx); }
     if(_notes.length){ var nl=document.createElement("div"); nl.className="lbl"; nl.textContent="Notes on record"; body.appendChild(nl); var nb=document.createElement("div"); nb.className="reclist"; _notes.forEach(function(t){ var r=document.createElement("div"); r.className="recline"; r.textContent=t; nb.appendChild(r); }); body.appendChild(nb); }
     var _kids=(window._ALL||[]).filter(function(t){return t.pid===i.id;});
-    if(_kids.length){ var kl=document.createElement("div"); kl.className="lbl"; kl.textContent="Sub-tasks ("+_kids.length+")"; body.appendChild(kl); var kb=document.createElement("div"); kb.className="reclist"; _kids.forEach(function(t){ var r=document.createElement("div"); r.className="recline task"; r.textContent="\u2022 "+t.title; kb.appendChild(r); }); body.appendChild(kb); }
+    if(_kids.length){ var kl=document.createElement("div"); kl.className="lbl"; kl.textContent="Tasks ("+_kids.length+")"; body.appendChild(kl); var kb=document.createElement("div"); kb.className="reclist"; _kids.forEach(function(t){
+      var r=document.createElement("div"); r.className="recline task"+(TDONE[t.id]?" tdone":""); r.textContent="\u2022 "+t.title;
+      r.onclick=function(){ TDONE[t.id]=!TDONE[t.id]; r.className="recline task"+(TDONE[t.id]?" tdone":""); refresh(); };
+      kb.appendChild(r); }); body.appendChild(kb); }
     var sl=document.createElement("div"); sl.className="lbl"; sl.textContent="Status"; body.appendChild(sl);
     var seg=document.createElement("div"); seg.className="seg";
     [["done","DONE"],["closed","CLOSED"],["carry","CARRY"]].forEach(function(pair){
@@ -337,10 +343,11 @@ function openReview(){
       actions:S[i.id].actions.map(function(a){return a.trim();}).filter(Boolean) };
   });
   var newItems = NEW.filter(function(x){return x.text.trim();}).map(function(x){return {text:x.text.trim(), onAgenda:x.onAgenda};});
+  var doneTasks = Object.keys(TDONE).filter(function(k){return TDONE[k];});
   fetch("https://n8n.dmowbray.us/webhook/meeting-review",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({k:K,dept:curDept,items:payload,newItems:newItems})})
+    body:JSON.stringify({k:K,dept:curDept,items:payload,newItems:newItems,doneTasks:doneTasks})})
     .then(function(r){return r.json();})
-    .then(function(out){ window._review={dept:curDept,items:payload,newItems:newItems,out:out}; renderReview(out); })
+    .then(function(out){ window._review={dept:curDept,items:payload,newItems:newItems,out:out,doneTasks:doneTasks}; renderReview(out); })
     .catch(function(){ renderReview({_fallback:true,
       notes:payload.map(function(p){return {ref:p.ref,cleaned:p.note,status:p.status};}),
       actions:[], newItems:newItems.map(function(x){return {title:x.text,onAgenda:x.onAgenda};}) }); });
@@ -389,7 +396,7 @@ function fileIt(){
   sheet.innerHTML='<div class="sheet-head"><div class="t">Filing...</div></div><div class="sheet-body"><div class="spinner"></div></div>';
   var r=window._review||{};
   fetch("https://n8n.dmowbray.us/webhook/meeting-file",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({k:K,dept:r.dept,review:r.out,items:r.items,newItems:r.newItems,today:new Date().toISOString().split("T")[0]})})
+    body:JSON.stringify({k:K,dept:r.dept,review:r.out,items:r.items,newItems:r.newItems,doneTasks:r.doneTasks||[],today:new Date().toISOString().split("T")[0]})})
     .then(function(x){return x.json();})
     .then(function(res){
       sheet.innerHTML='<div class="done-screen"><div class="ck">&#10003;</div><div style="font-size:18px;font-weight:700">Filed to the Brain</div><div class="s" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px">'+(res.summary||"Notes appended · actions and new items created · closed items off the agenda.")+'</div><div style="margin-top:24px"><button class="file-btn" style="max-width:220px" onclick="location.reload()">Done</button></div></div>';
