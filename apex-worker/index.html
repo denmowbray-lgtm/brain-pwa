@@ -794,7 +794,7 @@ function tryAccess(){
   fetch(DECK_DATA_URL+"?k="+encodeURIComponent(v)).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
     if(j&&j.ok){
       PIN=v;
-      try{sessionStorage.setItem("core_k",v);}catch(e){}
+      try{sessionStorage.setItem("core_k",v);localStorage.setItem("core_k",v);}catch(e){}
       unlockSite();
     }else{throw 0;}
   }).catch(function(){
@@ -809,6 +809,7 @@ acPin.addEventListener("input",function(){if(acPin.value.length>=4)tryAccess();}
   try{saved=sessionStorage.getItem("core_k")||"";}catch(e){}
   if(PIN||saved){
     if(!PIN)PIN=saved;
+    try{localStorage.setItem("core_k",PIN);}catch(e){}
     unlockSite();
   }else{
     setTimeout(function(){acPin.focus();},300);
