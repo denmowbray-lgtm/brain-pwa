@@ -215,21 +215,21 @@
    ============================================================ */
 
 /* ---------- config ---------- */
-var JARVIS_URL = "https://n8n.dmowbray.us/webhook/jarvis";
+var JARVIS_URL = "/webhook/jarvis";
 var PIN = new URLSearchParams(location.search).get("k") || "";   // never hardcoded; supply via ?k= or gate
 var SESSION = "apex-" + Math.random().toString(36).slice(2, 9);
-var TTS_URL = "https://n8n.dmowbray.us/webhook/tts";
-var DECK_DATA_URL = "https://n8n.dmowbray.us/webhook/deck-data";
-var SIT_DATA_URL = "https://n8n.dmowbray.us/webhook/sit-team-data";
+var TTS_URL = "/webhook/tts";
+var DECK_DATA_URL = "/webhook/deck-data";
+var SIT_DATA_URL = "/webhook/sit-team-data";
 
 var PODS = [
   { id:"sitteam", label:"SIT TEAM", meta:"DTW OPS",  go:"https://sitteam.dmowbray.us", live:true,  say:"Opening Sit Team." },
-  { id:"brain",   label:"AGENDA",   meta:"WCAA",     go:"https://n8n.dmowbray.us/webhook/capture", needsK:true, live:true, say:"Opening the Agenda." },
-  { id:"jarvis",  label:"JARVIS",   meta:"ASSIST",   go:"https://n8n.dmowbray.us/webhook/jarvis-ui", live:true, say:"Opening Jarvis." },
-  { id:"deck",    label:"DECK",     meta:"STATUS",   go:"https://dmowbray.us/deck",     needsK:true, live:true,  say:"Opening the Command Deck." },
+  { id:"brain",   label:"AGENDA",   meta:"WCAA",     go:"/webhook/capture", needsK:true, live:true, say:"Opening the Agenda." },
+  { id:"jarvis",  label:"JARVIS",   meta:"ASSIST",   go:"/webhook/jarvis-ui", needsK:true, live:true, say:"Opening Jarvis." },
+  { id:"deck",    label:"DECK",     meta:"STATUS",   go:"/webhook/deck",     needsK:true, live:true,  say:"Opening the Command Deck." },
   { id:"n8n",     label:"n8n",      meta:"AUTO",     go:"https://n8n.dmowbray.us",     live:true,  say:"Opening n8n." },
-  { id:"ha",      label:"HOME",     meta:"REACTOR",  go:"https://n8n.dmowbray.us/webhook/reactor", needsK:true, live:true, say:"Opening the Reactor." },
-  { id:"cam",     label:"CAMERAS",  meta:"PROPERTY", go:"https://n8n.dmowbray.us/webhook/security", needsK:true, live:true, say:"Opening the Property Map." }
+  { id:"ha",      label:"HOME",     meta:"REACTOR",  go:"/webhook/reactor", needsK:true, live:true, say:"Opening the Reactor." },
+  { id:"cam",     label:"CAMERAS",  meta:"PROPERTY", go:"/webhook/security", needsK:true, live:true, say:"Opening the Property Map." }
 ];
 var PODSTATE = {};   /* "ok" | "warn" | "down" | undefined */
 
@@ -806,7 +806,8 @@ acPin.addEventListener("keydown",function(e){if(e.key==="Enter")tryAccess();});
 acPin.addEventListener("input",function(){if(acPin.value.length>=4)tryAccess();});
 (function(){
   var saved="";
-  try{saved=sessionStorage.getItem("core_k")||"";}catch(e){}
+  try{saved=sessionStorage.getItem("core_k")||"";
+  if(!saved){try{saved=localStorage.getItem("core_k")||"";}catch(e){}}}catch(e){}
   if(PIN||saved){
     if(!PIN)PIN=saved;
     try{localStorage.setItem("core_k",PIN);}catch(e){}
