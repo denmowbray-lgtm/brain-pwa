@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+# gate-patch-p1.py — Phase 1 auth unification:
+#  - Reactor (aDfiPkkin1TgbIgs) + Security (v2n0bRhqmSRx4syU): Deny 401 -> Mission Control gate (200, text/html)
+#  - JARVIS Phone UI (avPI3ObW3ZKjNNMw): insert Check PIN (cloned from Reactor) + Deny Gate before Serve Page
+import json,urllib.request,base64,hashlib,uuid
+JWT="__JWT__"
+H={"X-N8N-API-KEY":JWT,"Content-Type":"application/json"}
+API="http://localhost:5678/api/v1/workflows/"
+GATE=base64.b64decode("PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAsIG1heGltdW0tc2NhbGU9MS4wLCB2aWV3cG9ydC1maXQ9Y292ZXIiPgo8bWV0YSBuYW1lPSJ0aGVtZS1jb2xvciIgY29udGVudD0iIzAwMDAwMCI+Cjx0aXRsZT5kbW93YnJheS51cyDigJQgQ29tbWFuZCBEZWNrPC90aXRsZT4KPHN0eWxlPgo6cm9vdHstLWJnOiMwMDA7LS1wYW5lbDojMGIxMjFiOy0tbGluZTojMTYyMjJmOy0tbGluZTI6IzFkMmQzZDstLXR4dDojZGJlN2YyOy0tbXV0OiM2NDc2ODk7LS1tdXQyOiMzZjRmNWU7LS1jeTojNDNlNWZmOy0tY3lnOnJnYmEoNjcsMjI5LDI1NSwuMTMpOy0tcmVkOiNmZjI3NDA7LS1yZWRzOnJnYmEoMjU1LDM5LDY0LC4xNCk7LS1yZWRnOnJnYmEoMjU1LDM5LDY0LC41NSk7LS1tb25vOnVpLW1vbm9zcGFjZSwiU0YgTW9ubyIsIkpldEJyYWlucyBNb25vIixNZW5sbyxDb25zb2xhcyxtb25vc3BhY2V9Cip7bWFyZ2luOjA7cGFkZGluZzowO2JveC1zaXppbmc6Ym9yZGVyLWJveDstd2Via2l0LXRhcC1oaWdobGlnaHQtY29sb3I6dHJhbnNwYXJlbnR9Cmh0bWwsYm9keXtoZWlnaHQ6MTAwJX0KYm9keXtiYWNrZ3JvdW5kOnZhcigtLWJnKTtjb2xvcjp2YXIoLS10eHQpO2ZvbnQtZmFtaWx5OnZhcigtLW1vbm8pO292ZXJmbG93OmhpZGRlbjtiYWNrZ3JvdW5kLWltYWdlOnJhZGlhbC1ncmFkaWVudCgxMjAwcHggNTYwcHggYXQgNTAlIC04JSxyZ2JhKDY3LDIyOSwyNTUsLjA3KSx0cmFuc3BhcmVudCA2MCUpfQojc3RhcnN7cG9zaXRpb246Zml4ZWQ7aW5zZXQ6MDt6LWluZGV4OjA7b3BhY2l0eTouNX0KLndyYXB7cG9zaXRpb246cmVsYXRpdmU7ei1pbmRleDoxO2hlaWdodDoxMDBkdmg7ZGlzcGxheTpmbGV4O2ZsZXgtZGlyZWN0aW9uOmNvbHVtbjthbGlnbi1pdGVtczpjZW50ZXI7anVzdGlmeS1jb250ZW50OmNlbnRlcjtnYXA6MThweDttYXgtd2lkdGg6NDMwcHg7bWFyZ2luOjAgYXV0bztwYWRkaW5nOjI0cHh9Ci5leWVicm93e2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjI0ZW07Y29sb3I6dmFyKC0tbXV0KTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2V9Ci5tYXJre2ZvbnQtc2l6ZToxNXB4O2xldHRlci1zcGFjaW5nOi4yZW07Y29sb3I6dmFyKC0tY3kpO2ZvbnQtd2VpZ2h0OjcwMDt0ZXh0LXNoYWRvdzowIDAgMTRweCByZ2JhKDY3LDIyOSwyNTUsLjUpfQouZWtne2hlaWdodDoxNXB4O3dpZHRoOjkwcHg7ZGlzcGxheTpibG9jazttYXJnaW4tdG9wOjJweH0KLmRvdHN7ZGlzcGxheTpmbGV4O2dhcDoxNHB4O21hcmdpbjo4cHggMCAycHh9Ci5kb3RzIGl7d2lkdGg6MTNweDtoZWlnaHQ6MTNweDtib3JkZXItcmFkaXVzOjUwJTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWxpbmUyKTtiYWNrZ3JvdW5kOnZhcigtLXBhbmVsKTt0cmFuc2l0aW9uOmFsbCAuMTJzfQouZG90cyBpLmZ7YmFja2dyb3VuZDp2YXIoLS1jeSk7Ym9yZGVyLWNvbG9yOnZhcigtLWN5KTtib3gtc2hhZG93OjAgMCAxMHB4IHJnYmEoNjcsMjI5LDI1NSwuNil9Ci5tc2d7Zm9udC1zaXplOjExcHg7bGV0dGVyLXNwYWNpbmc6LjEyZW07Y29sb3I6dmFyKC0tbXV0KTtoZWlnaHQ6MTVweH0KYm9keS5kZW4gLm1zZ3tjb2xvcjp2YXIoLS1yZWQpO2FuaW1hdGlvbjpycCAxLjFzIGVhc2UtaW4tb3V0IGluZmluaXRlfQpib2R5LmRlbiAuZG90cyBpe2JvcmRlci1jb2xvcjojNWExODIyfQpAa2V5ZnJhbWVzIHJwezAlLDEwMCV7b3BhY2l0eToxfTUwJXtvcGFjaXR5Oi40NX19Ci5wYWR7ZGlzcGxheTpncmlkO2dyaWQtdGVtcGxhdGUtY29sdW1uczpyZXBlYXQoMyw3MnB4KTtnYXA6MTJweDttYXJnaW4tdG9wOjZweH0KLnBhZCBidXR0b257aGVpZ2h0OjYwcHg7Ym9yZGVyLXJhZGl1czoxMnB4O2JhY2tncm91bmQ6dmFyKC0tcGFuZWwpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tbGluZTIpO2NvbG9yOnZhcigtLXR4dCk7Zm9udC1mYW1pbHk6dmFyKC0tbW9ubyk7Zm9udC1zaXplOjIwcHg7Zm9udC13ZWlnaHQ6NjAwO2N1cnNvcjpwb2ludGVyfQoucGFkIGJ1dHRvbjphY3RpdmV7YmFja2dyb3VuZDp2YXIoLS1jeWcpO2JvcmRlci1jb2xvcjp2YXIoLS1jeSk7Y29sb3I6dmFyKC0tY3kpfQoucGFkIGJ1dHRvbi5mbntmb250LXNpemU6MTJweDtjb2xvcjp2YXIoLS1tdXQpO2xldHRlci1zcGFjaW5nOi4xZW19Ci5mb290e2ZvbnQtc2l6ZTo4LjVweDtsZXR0ZXItc3BhY2luZzouMThlbTtjb2xvcjp2YXIoLS1tdXQyKTttYXJnaW4tdG9wOjEwcHh9Cjwvc3R5bGU+CjwvaGVhZD4KPGJvZHk+CjxjYW52YXMgaWQ9InN0YXJzIj48L2NhbnZhcz4KPGRpdiBjbGFzcz0id3JhcCI+CiAgPGRpdiBjbGFzcz0iZXllYnJvdyI+RE1PV0JSQVkgJm1pZGRvdDsgTUlTU0lPTiBDT05UUk9MPC9kaXY+CiAgPGRpdiBjbGFzcz0ibWFyayI+JiMxMjgyNzQ7IENPTU1BTkQgREVDSzwvZGl2PgogIDxzdmcgY2xhc3M9ImVrZyIgdmlld0JveD0iMCAwIDkwIDE1Ij48cG9seWxpbmUgcG9pbnRzPSIwLDggMTYsOCAyMSwzIDI3LDEyIDMzLDggNTYsOCA2Miw1IDY4LDExIDc0LDggOTAsOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDNlNWZmIiBzdHJva2Utd2lkdGg9IjEuMyIvPjwvc3ZnPgogIDxkaXYgY2xhc3M9ImRvdHMiIGlkPSJkb3RzIj48aT48L2k+PGk+PC9pPjxpPjwvaT48aT48L2k+PC9kaXY+CiAgPGRpdiBjbGFzcz0ibXNnIiBpZD0ibXNnIj5FTlRFUiBQSU48L2Rpdj4KICA8ZGl2IGNsYXNzPSJwYWQiIGlkPSJwYWQiPgogICAgPGJ1dHRvbj4xPC9idXR0b24+PGJ1dHRvbj4yPC9idXR0b24+PGJ1dHRvbj4zPC9idXR0b24+CiAgICA8YnV0dG9uPjQ8L2J1dHRvbj48YnV0dG9uPjU8L2J1dHRvbj48YnV0dG9uPjY8L2J1dHRvbj4KICAgIDxidXR0b24+NzwvYnV0dG9uPjxidXR0b24+ODwvYnV0dG9uPjxidXR0b24+OTwvYnV0dG9uPgogICAgPGJ1dHRvbiBjbGFzcz0iZm4iIGlkPSJjbHIiPkNMUjwvYnV0dG9uPjxidXR0b24+MDwvYnV0dG9uPjxidXR0b24gY2xhc3M9ImZuIiBpZD0iZW50Ij5FTlRFUjwvYnV0dG9uPgogIDwvZGl2PgogIDxkaXYgY2xhc3M9ImZvb3QiPkFVVEhPUklaRUQgUEVSU09OTkVMIE9OTFk8L2Rpdj4KPC9kaXY+CjxzY3JpcHQ+CihmdW5jdGlvbigpe3ZhciBjPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJzdGFycyIpLHg9Yy5nZXRDb250ZXh0KCIyZCIpLHN0PVtdOwogZnVuY3Rpb24gcnMoKXtjLndpZHRoPWlubmVyV2lkdGg7Yy5oZWlnaHQ9aW5uZXJIZWlnaHQ7c3Q9W107Zm9yKHZhciBpPTA7aTw3MDtpKyspc3QucHVzaCh7eDpNYXRoLnJhbmRvbSgpKmMud2lkdGgseTpNYXRoLnJhbmRvbSgpKmMuaGVpZ2h0LHI6TWF0aC5yYW5kb20oKSoxLjIrLjIsYTpNYXRoLnJhbmRvbSgpKi42Ky4xNSxzOk1hdGgucmFuZG9tKCkqLjAyKy4wMDR9KTt9CiBycygpO2FkZEV2ZW50TGlzdGVuZXIoInJlc2l6ZSIscnMpOwogKGZ1bmN0aW9uIGxvb3AoKXt4LmNsZWFyUmVjdCgwLDAsYy53aWR0aCxjLmhlaWdodCk7Zm9yKHZhciBpPTA7aTxzdC5sZW5ndGg7aSsrKXt2YXIgcD1zdFtpXTtwLmErPXAucztpZihwLmE+Ljc1fHxwLmE8LjEyKXAucyo9LTE7eC5iZWdpblBhdGgoKTt4LmFyYyhwLngscC55LHAuciwwLDcpO3guZmlsbFN0eWxlPSJyZ2JhKDEyMCwyMDAsMjMwLCIrcC5hKyIpIjt4LmZpbGwoKTt9cmVxdWVzdEFuaW1hdGlvbkZyYW1lKGxvb3ApO30pKCk7Cn0pKCk7CihmdW5jdGlvbigpewp2YXIgcT1uZXcgVVJMU2VhcmNoUGFyYW1zKGxvY2F0aW9uLnNlYXJjaCksdHJpZWQ9cS5nZXQoImsiKTsKaWYodHJpZWQpey8qIHNlcnZlciByZWplY3RlZCB0aGlzIGtleSAqLwogZG9jdW1lbnQuYm9keS5jbGFzc0xpc3QuYWRkKCJkZW4iKTsKIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJtc2ciKS50ZXh0Q29udGVudD0iQUNDRVNTIERFTklFRCI7CiB0cnl7aWYobG9jYWxTdG9yYWdlLmdldEl0ZW0oImNvcmVfayIpPT09dHJpZWQpbG9jYWxTdG9yYWdlLnJlbW92ZUl0ZW0oImNvcmVfayIpO31jYXRjaChlKXt9Cn1lbHNlewogdHJ5e3ZhciBzPWxvY2FsU3RvcmFnZS5nZXRJdGVtKCJjb3JlX2siKTsKICBpZihzKXt2YXIgdT1uZXcgVVJMKGxvY2F0aW9uLmhyZWYpO3Uuc2VhcmNoUGFyYW1zLnNldCgiayIscyk7bG9jYXRpb24ucmVwbGFjZSh1LmhyZWYpO319Y2F0Y2goZSl7fQp9CnZhciBidWY9IiIsZG90cz1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiZG90cyIpLmNoaWxkcmVuLG1zZz1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgibXNnIik7CmZ1bmN0aW9uIHBhaW50KCl7Zm9yKHZhciBpPTA7aTw0O2krKylkb3RzW2ldLmNsYXNzTmFtZT1pPGJ1Zi5sZW5ndGg/ImYiOiIiO30KZnVuY3Rpb24gcHJlc3ModCl7CiBpZih0PT09IkNMUiIpe2J1Zj0iIjtwYWludCgpO2RvY3VtZW50LmJvZHkuY2xhc3NMaXN0LnJlbW92ZSgiZGVuIik7bXNnLnRleHRDb250ZW50PSJFTlRFUiBQSU4iO3JldHVybjt9CiBpZih0PT09IkVOVEVSIil7c3VibWl0KCk7cmV0dXJuO30KIGlmKC9eXGQkLy50ZXN0KHQpJiZidWYubGVuZ3RoPDQpe2J1Zis9dDtwYWludCgpO2lmKGJ1Zi5sZW5ndGg9PT00KXNldFRpbWVvdXQoc3VibWl0LDE1MCk7fQp9CmZ1bmN0aW9uIHN1Ym1pdCgpe2lmKGJ1Zi5sZW5ndGg8NClyZXR1cm47CiB0cnl7bG9jYWxTdG9yYWdlLnNldEl0ZW0oImNvcmVfayIsYnVmKTt9Y2F0Y2goZSl7fQogbXNnLnRleHRDb250ZW50PSJWRVJJRllJTkdcdTIwMjYiO2RvY3VtZW50LmJvZHkuY2xhc3NMaXN0LnJlbW92ZSgiZGVuIik7CiB2YXIgdT1uZXcgVVJMKGxvY2F0aW9uLmhyZWYpO3Uuc2VhcmNoUGFyYW1zLnNldCgiayIsYnVmKTtsb2NhdGlvbi5yZXBsYWNlKHUuaHJlZik7fQpkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgicGFkIikuYWRkRXZlbnRMaXN0ZW5lcigiY2xpY2siLGZ1bmN0aW9uKGUpewogaWYoZS50YXJnZXQudGFnTmFtZT09PSJCVVRUT04iKXByZXNzKGUudGFyZ2V0LnRleHRDb250ZW50KTt9KTsKYWRkRXZlbnRMaXN0ZW5lcigia2V5ZG93biIsZnVuY3Rpb24oZSl7CiBpZigvXlxkJC8udGVzdChlLmtleSkpcHJlc3MoZS5rZXkpOwogZWxzZSBpZihlLmtleT09PSJFbnRlciIpcHJlc3MoIkVOVEVSIik7CiBlbHNlIGlmKGUua2V5PT09IkJhY2tzcGFjZSIpe2J1Zj1idWYuc2xpY2UoMCwtMSk7cGFpbnQoKTt9fSk7Cn0pKCk7Cjwvc2NyaXB0Pgo8L2JvZHk+CjwvaHRtbD4K").decode("utf-8")
+print("gate md5:",hashlib.md5(GATE.encode()).hexdigest(),len(GATE),"bytes")
+def get(wid):
+    return json.loads(urllib.request.urlopen(urllib.request.Request(API+wid,headers={"X-N8N-API-KEY":JWT})).read())
+def put(wf):
+    p=json.dumps({"name":wf["name"],"nodes":wf["nodes"],"connections":wf["connections"],"settings":wf.get("settings",{})}).encode()
+    r=json.loads(urllib.request.urlopen(urllib.request.Request(API+wf["id"],data=p,method="PUT",headers=H)).read())
+    print("updated:",r.get("id"),r.get("name"))
+DENY={"respondWith":"text","responseBody":GATE,"options":{"responseCode":200,"responseHeaders":{"entries":[{"name":"Content-Type","value":"text/html; charset=utf-8"}]}}}
+# 1+2: reactor & security deny bodies
+reactor=get("aDfiPkkin1TgbIgs")
+pin_node=None
+for wid in ("aDfiPkkin1TgbIgs","v2n0bRhqmSRx4syU"):
+    wf=reactor if wid=="aDfiPkkin1TgbIgs" else get(wid)
+    hit=False
+    for n in wf["nodes"]:
+        if n["name"]=="Deny 401":
+            n["parameters"]=DENY; hit=True
+        if wid=="aDfiPkkin1TgbIgs" and n["name"]=="Check PIN":
+            pin_node=json.loads(json.dumps(n))
+    assert hit, wid+": Deny 401 not found"
+    put(wf)
+assert pin_node,"no Check PIN template"
+# 3: jarvis-ui — insert gate
+j=get("avPI3ObW3ZKjNNMw")
+names=[n["name"] for n in j["nodes"]]
+if "Check PIN" in names:
+    print("jarvis-ui already gated; skipping insert")
+else:
+    ui=[n for n in j["nodes"] if n["name"]=="UI Webhook"][0]
+    chk=pin_node
+    chk["id"]=str(uuid.uuid4()); chk["name"]="Check PIN"
+    chk["position"]=[ui["position"][0]+220,ui["position"][1]]
+    deny={"id":str(uuid.uuid4()),"name":"Deny Gate","type":"n8n-nodes-base.respondToWebhook",
+          "typeVersion":[n for n in j["nodes"] if n["name"]=="Serve Page"][0]["typeVersion"],
+          "position":[ui["position"][0]+440,ui["position"][1]+180],"parameters":json.loads(json.dumps(DENY))}
+    j["nodes"].extend([chk,deny])
+    j["connections"]["UI Webhook"]={"main":[[{"node":"Check PIN","type":"main","index":0}]]}
+    j["connections"]["Check PIN"]={"main":[[{"node":"Serve Page","type":"main","index":0}],[{"node":"Deny Gate","type":"main","index":0}]]}
+    put(j)
+print("done")
