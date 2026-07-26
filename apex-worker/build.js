@@ -93,6 +93,7 @@ const worker =
 'function serve(req) {\n' +
 '  var p = "";\n' +
 '  try { p = new URL(req.url).pathname; } catch (err) {}\n' +
+'  if (p.indexOf(\"/webhook/\") === 0) return proxy(req);\n' +
 '  if (p === "/manifest.json") return new Response(MANIFEST, { headers: { "content-type": "application/manifest+json", "cache-control": "no-store" } });\n' +
 '  if (p === "/m-deck.json") return new Response(DECKMAN, { headers: { "content-type": "application/manifest+json", "cache-control": "no-store" } });\n' +
 '  if (p === "/icon.svg") return new Response(ICON, { headers: { "content-type": "image/svg+xml", "cache-control": "max-age=86400" } });\n' +
@@ -109,6 +110,6 @@ const worker =
 '  var b64 = "__HTMLB64__";\n' +
 '  var html = new TextDecoder("utf-8").decode(bin(b64));\n' +
 '  return new Response(html, { headers: { "content-type": "text/html;charset=UTF-8", "cache-control": "no-store" } });\n' +
-'}';
+'}\nasync function proxy(req) {\n  var u = new URL(req.url);\n  var t = "https://n8n.dmowbray.us" + u.pathname + u.search;\n  var init = { method: req.method, headers: {} };\n  var ct = req.headers.get("content-type"); if (ct) init.headers["content-type"] = ct;\n  if (req.method !== "GET" && req.method !== "HEAD") init.body = await req.arrayBuffer();\n  var r = await fetch(t, init);\n  var rct = r.headers.get("content-type") || "";\n  if (rct.indexOf("text/html") >= 0) {\n    var txt = await r.text();\n    txt = txt.split("https://n8n.dmowbray.us").join("");\n    return new Response(txt, { status: r.status, headers: { "content-type": rct, "cache-control": "no-store" } });\n  }\n  var h2 = { "cache-control": "no-store" };\n  if (rct) h2["content-type"] = rct;\n  return new Response(r.body, { status: r.status, headers: h2 });\n}';
 fs.writeFileSync(__dirname + "/worker.js", worker.replace("__HTMLB64__", b64));
 console.log("worker.js regenerated — html " + html.length + " chars");
